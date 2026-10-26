@@ -5,4 +5,49 @@ function dec(s){return s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1').replace(/&a
 async function quotes(){const sy={gold:'GC=F',dxy:'DX-Y.NYB',yield:'^TNX',brent:'BZ=F',vix:'^VIX'},o={};for(const[k,s]of Object.entries(sy)){try{let j=await getJSON(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?range=5d&interval=1d`),r=j.chart.result[0],m=r.meta,c=(r.indicators.quote[0].close||[]).filter(Number.isFinite),p=Number(m.regularMarketPrice??c.at(-1)),v=Number(m.chartPreviousClose??m.previousClose??c.at(-2));o[k]={symbol:s,price:p,prev:v,pct:(p/v-1)*100}}catch(e){o[k]={symbol:s,error:e.message}}}return o}
 async function calendar(){let a=await getJSON('https://nfs.faireconomy.media/ff_calendar_thisweek.json'),today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo'}).format(new Date());return a.filter(e=>e.country==='USD'&&new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo'}).format(new Date(e.date))===today).map(e=>({title:e.title,date:e.date,impact:e.impact,forecast:e.forecast,previous:e.previous})).sort((a,b)=>new Date(a.date)-new Date(b.date))}
 async function news(){let q=encodeURIComponent('gold OR XAUUSD OR Fed OR Treasury OR Iran OR Israel OR Ukraine OR Russia'),r=await fetch(`https://news.google.com/rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en`,{headers:{"User-Agent":"Mozilla/5.0 AurumFlow/8.0"},cf:{cacheTtl:180,cacheEverything:true}});if(!r.ok)throw Error(`Notícias HTTP ${r.status}`);let x=await r.text(),bs=[...x.matchAll(/<item>([\s\S]*?)<\/item>/gi)].slice(0,10).map(m=>m[1]);return bs.map(b=>({title:tag(b,'title'),link:tag(b,'link'),date:tag(b,'pubDate'),source:tag(b,'source')}))}
-export default{async fetch(req){if(req.method==='OPTIONS')return new Response(null,{headers:CORS});let p=new URL(req.url).pathname;try{if(p==='/api/quotes')return json(await quotes());if(p==='/api/calendar')return json(await calendar());if(p==='/api/news')return json(await news());if(p==='/api/health')return json({ok:true,time:new Date().toISOString()});return json({error:'Endpoint não encontrado'},404)}catch(e){return json({error:e.message},502)}}};
+export default {
+  async fetch(req) {
+
+    if (req.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: CORS
+      });
+    }
+
+    const url = new URL(req.url);
+    const p = url.pathname;
+
+    try {
+
+      if (p === '/api/quotes') {
+        return json(await quotes());
+      }
+
+      if (p === '/api/calendar') {
+        return json(await calendar());
+      }
+
+      if (p === '/api/news') {
+        return json(await news());
+      }
+
+      if (p === '/api/health') {
+        return json({
+          ok: true,
+          time: new Date().toISOString()
+        });
+      }
+
+      return json({
+        error: 'Endpoint não encontrado'
+      }, 404);
+
+    } catch (e) {
+
+      return json({
+        error: e.message
+      }, 502);
+
+    }
+  }
+};
