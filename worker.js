@@ -4,8 +4,47 @@ async function getJSON(u){const r=await fetch(u,{headers:{"User-Agent":"Mozilla/
 function dec(s){return s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>')}function tag(b,n){let m=b.match(new RegExp(`<${n}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${n}>`,'i'));return dec(m?.[1]?.trim()||'')}
 async function quotes(){const sy={gold:'GC=F',dxy:'DX-Y.NYB',yield:'^TNX',brent:'BZ=F',vix:'^VIX'},o={};for(const[k,s]of Object.entries(sy)){try{let j=await getJSON(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?range=5d&interval=1d`),r=j.chart.result[0],m=r.meta,c=(r.indicators.quote[0].close||[]).filter(Number.isFinite),p=Number(m.regularMarketPrice??c.at(-1)),v=Number(m.chartPreviousClose??m.previousClose??c.at(-2));o[k]={symbol:s,price:p,prev:v,pct:(p/v-1)*100}}catch(e){o[k]={symbol:s,error:e.message}}}return o}
 async function calendar(){let a=await getJSON('https://nfs.faireconomy.media/ff_calendar_thisweek.json'),today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo'}).format(new Date());return a.filter(e=>e.country==='USD'&&new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo'}).format(new Date(e.date))===today).map(e=>({title:e.title,date:e.date,impact:e.impact,forecast:e.forecast,previous:e.previous})).sort((a,b)=>new Date(a.date)-new Date(b.date))}
-async function news(){let q=encodeURIComponent('gold OR XAUUSD OR Fed OR Treasury OR Iran OR Israel OR Ukraine OR Russia'),r=await fetch(`https://news.google.com/rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en`,{headers:{"User-Agent":"Mozilla/5.0 AurumFlow/8.0"},cf:{cacheTtl:180,cacheEverything:true}});if(!r.ok)throw Error(`Notícias HTTP ${r.status}`);let x=await r.text(),bs=[...x.matchAll(/<item>([\s\S]*?)<\/item>/gi)].slice(0,10).map(m=>m[1]);return bs.map(b=>({title:tag(b,'title'),link:tag(b,'link'),date:tag(b,'pubDate'),source:tag(b,'source')}))}
-export default {
+async function news() {
+
+  const query =
+    '(gold OR XAUUSD OR Federal Reserve OR Treasury OR Iran OR Israel OR Ukraine OR Russia)';
+
+  const url =
+    'https://api.gdeltproject.org/api/v2/doc/doc?' +
+    'query=' + encodeURIComponent(query) +
+    '&mode=ArtList' +
+    '&maxrecords=20' +
+    '&format=json';
+
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 AurumFlow/8.1'
+    },
+    cf: {
+      cacheTtl: 180,
+      cacheEverything: true
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      'GDELT HTTP ' + response.status
+    );
+  }
+
+  const data = await response.json();
+
+  const articles = Array.isArray(data.articles)
+    ? data.articles
+    : [];
+
+  return articles.slice(0, 10).map(article => ({
+    title: article.title || '',
+    link: article.url || '',
+    date: article.seendate || '',
+    source: article.domain || ''
+  }));
+}
   async fetch(req) {
 
     if (req.method === 'OPTIONS') {
