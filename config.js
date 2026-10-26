@@ -1,1 +1,1 @@
-window.AURUM_CONFIG = { workerBase: "COLE-AQUI-A-URL-DO-WORKER" };
+window.AURUM_CONFIG = { workerBase: https://winter-field-b9a1.wallace-martins25.workers.dev/" };
